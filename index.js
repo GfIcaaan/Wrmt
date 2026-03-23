@@ -1,17 +1,37 @@
+'use strict';
+
 const express = require('express');
-const path = require('path');
+const http = require('http');
+const WebSocket = require('ws');
 
 const app = express();
-const PORT = 3000;
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
-// Serve static files from the root directory
-app.use(express.static(path.join(__dirname, '/')));
+// Serve static files from the public directory
+app.use(express.static('public'));
 
-// Handle all routes to index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+// WebSocket setup
+wss.on('connection', (ws) => {
+    console.log('New client connected');
+
+    ws.on('message', (message) => {
+        console.log(`Received message: ${message}`);
+        // Broadcast message to all clients
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(message);
+            }
+        });
+    });
+
+    ws.on('close', () => {
+        console.log('Client disconnected');
+    });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+// Start the server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server is listening on port ${PORT}`);
 });
